@@ -2,6 +2,7 @@
 title Radeon-atieclxx-SSD-Fix
 if not exist "%~dp0Skript\Oberflaeche.ps1" (
   echo Bitte die ZIP-Datei zuerst vollstaendig entpacken und dann START.cmd starten.
+  echo Please extract the ZIP file completely first, then start START.cmd.
   pause
   exit /b 1
 )

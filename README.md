@@ -1,5 +1,7 @@
 # Radeon-atieclxx-SSD-Fix
 
+**Deutsch** | [English](README.en.md)
+
 **Der Radeon-Treiber schreibt fortwährend auf deine SSD?** Bei betroffenen Treibern kopiert sich `atieclxx.exe` (Dienst „AMD External Events Utility“) jede Sekunde selbst – rund 56 GB pro Tag. Dieses Programm prüft, ob dein PC betroffen ist, schätzt den bisherigen Schaden und stoppt das Dauerschreiben gezielt, ohne den Dienst abzuschalten.
 
 > **Hinweis:** Inoffizieller Workaround, nicht von AMD und ohne Verbindung zu AMD. Nutzung auf eigene Verantwortung, ohne Gewährleistung und ohne Haftung (siehe [LICENSE.txt](LICENSE.txt)).
@@ -27,6 +29,10 @@ Die Datei ist rund 660 KB groß, das sind im Dauerbetrieb etwa 56 GB pro Tag. Da
 3. `START.cmd` doppelklicken und die Windows-Abfrage nach Administratorrechten mit „Ja“ bestätigen.
 
 Falls Windows warnt („Der Computer wurde durch Windows geschützt“): „Weitere Informationen“ → „Trotzdem ausführen“. Oder vor dem Entpacken die ZIP-Datei mit Rechtsklick → Eigenschaften → „Zulassen“ freigeben.
+
+## Sprache
+
+Fenster, Status- und Entfernen-Skript sowie das Protokoll gibt es auf Deutsch und Englisch. Auf einem deutschen Windows startet das Programm auf Deutsch, sonst auf Englisch. Umschalten lässt sich jederzeit über das Auswahlfeld oben rechts im Fenster; die Auswahl wird gemerkt.
 
 ## Was das Programm macht
 
@@ -59,7 +65,7 @@ Der gezielte Schutz richtet die Aufgabe „Radeon-atieclxx-SSD-Fix“ in der Auf
 - Schutz: `icacls <Kopie> /deny *S-1-5-18:(WD,AD,WEA,WA,DE)`, also ein Verweigern-Eintrag nur für das Konto SYSTEM auf genau diese eine Datei.
 - Die Selbstkopie wird über die USN des NTFS-Änderungsjournals erkannt (`FSCTL_READ_FILE_USN_DATA`). Zeitstempel taugen dafür nicht, weil `CopyFile` sie von der Quelle übernimmt. Als Rückfallebene ermittelt eine kurze ETW-Aufzeichnung (höchstens 64 MB, wird sofort gelöscht), wohin geschrieben wird.
 - Die Messung läuft im Hintergrund, das Fenster bleibt bedienbar.
-- Keine Downloads, keine Internetverbindung, keine Änderung am Treiber, keine AMD-Dateien im Paket. Der gesamte Quelltext liegt im Ordner [`Skript`](Skript).
+- Keine Downloads, keine Internetverbindung, keine Änderung am Treiber, keine AMD-Dateien im Paket. Der gesamte Quelltext liegt im Ordner [`Skript`](Skript). Deutsch ist die Quellsprache der Skripte, die englischen Texte stehen in [`Skript/Englisch.ps1`](Skript/Englisch.ps1).
 
 ## Status prüfen und entfernen
 
@@ -67,8 +73,9 @@ Der gezielte Schutz richtet die Aufgabe „Radeon-atieclxx-SSD-Fix“ in der Auf
 |---|---|
 | `PRUEFEN.cmd` | Status und 10-Sekunden-Messung, ohne Adminrechte |
 | `ENTFERNEN.cmd` | nimmt alles zurück und löscht den Programmordner |
+| `LIESMICH.txt` / `README.txt` | Anleitung auf Deutsch / Englisch |
 
-Nach dem gezielten Schutz liegen beide auch in `C:\Program Files\Radeon-atieclxx-SSD-Fix`.
+Nach dem gezielten Schutz liegen diese Dateien auch in `C:\Program Files\Radeon-atieclxx-SSD-Fix`.
 
 ## Alternative ohne dieses Programm
 
@@ -87,6 +94,4 @@ MIT-Lizenz, siehe [LICENSE.txt](LICENSE.txt). AMD, Radeon und Smart Access Memor
 
 ---
 
-## English summary
-
-Unofficial workaround for an AMD Radeon driver bug reported on 2026-11-09: the "AMD External Events Utility" (`atieclxx.exe`) copies itself every second to `C:\Windows\System32\config\systemprofile\AppData\Local\AMD\atieclxx.exe` (about 660 KB/s, roughly 56 GB per day of continuous SSD writes). This tool measures whether a PC is affected, estimates the writes so far and offers fixes: a targeted file-permission block (deny write/delete for SYSTEM on that single file, so the service, FreeSync and frame pacing keep working) with a scheduled task that keeps it in place after driver updates and lifts it automatically once AMD ships a fix, disabling the service, or reverting everything. German user interface. No downloads, no network access, no driver modification. MIT licensed, not affiliated with AMD.
+**English:** the full documentation is in [README.en.md](README.en.md). The window, the scripts and the log are available in German and English.

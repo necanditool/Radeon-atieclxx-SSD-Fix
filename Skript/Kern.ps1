@@ -19,6 +19,40 @@ $script:TraceName      = 'RadeonSsdFixTrace'
 # eine einzelne Kopie beim Dienststart (~0,66 MB) bleibt im 8-Sekunden-Fenster mit ~85 KB/s deutlich darunter.
 $script:SchreibGrenze  = 150KB
 
+# ------------------------------------------------------------------ Sprache
+# Deutsch ist die Quellsprache. T übersetzt einen Text über die Tabelle in Englisch.ps1, wenn Englisch gewählt ist.
+# Vorgabe ist die Windows-Anzeigesprache (Deutsch, sonst Englisch); die Auswahl im Fenster steht in sprache.txt.
+$script:SpracheDatei = Join-Path $PSScriptRoot 'sprache.txt'
+$script:Sprache      = 'de'
+$script:Englisch     = $null
+function Read-Sprache {
+  try {
+    $s = ([string](Get-Content -LiteralPath $script:SpracheDatei -TotalCount 1 -ErrorAction Stop)).Trim().ToLowerInvariant()
+    if ($s -in 'de', 'en') { return $s }
+  } catch {}
+  if ([System.Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName -eq 'de') { return 'de' }
+  return 'en'
+}
+function Set-Sprache {
+  param([string]$Sprache, [switch]$Merken)
+  $script:Sprache = $(if ($Sprache -eq 'de') { 'de' } else { 'en' })
+  if ($script:Sprache -eq 'en' -and -not $script:Englisch) {
+    try { $script:Englisch = & (Join-Path $PSScriptRoot 'Englisch.ps1') } catch {}   # ohne Tabelle bleibt es bei Deutsch
+  }
+  if ($Merken) {
+    # Neben den Skripten merken und, falls eingerichtet, auch im Programmordner (dort liest der Wächter).
+    $ziele = @($script:SpracheDatei)
+    $inst = Join-Path $script:InstallDir 'Skript'
+    if ((Test-Path -LiteralPath $inst) -and -not [string]::Equals($inst, $PSScriptRoot.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) { $ziele += (Join-Path $inst 'sprache.txt') }
+    foreach ($z in $ziele) { try { Set-Content -LiteralPath $z -Value $script:Sprache -Encoding ASCII -ErrorAction Stop } catch {} }
+  }
+}
+function T([string]$Text) {
+  if ($script:Sprache -eq 'en' -and $script:Englisch -and $script:Englisch.ContainsKey($Text)) { return [string]$script:Englisch[$Text] }
+  return $Text
+}
+Set-Sprache (Read-Sprache)
+
 # ------------------------------------------------------------------ Grundlagen
 function Test-IstAdmin {
   ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -36,9 +70,9 @@ function Get-AmdDienst {
   return ($d | Select-Object -First 1)
 }
 function Get-DienstText($Dienst) {
-  if (-not $Dienst) { return 'nicht vorhanden' }
-  $st = switch ([string]$Dienst.Status) { 'Running' { 'läuft' } 'Stopped' { 'gestoppt' } 'StartPending' { 'startet' } 'StopPending' { 'stoppt' } default { [string]$Dienst.Status } }
-  $ty = switch ([string]$Dienst.StartType) { 'Automatic' { 'automatisch' } 'Manual' { 'manuell' } 'Disabled' { 'deaktiviert' } default { [string]$Dienst.StartType } }
+  if (-not $Dienst) { return (T 'nicht vorhanden') }
+  $st = switch ([string]$Dienst.Status) { 'Running' { T 'läuft' } 'Stopped' { T 'gestoppt' } 'StartPending' { T 'startet' } 'StopPending' { T 'stoppt' } default { [string]$Dienst.Status } }
+  $ty = switch ([string]$Dienst.StartType) { 'Automatic' { T 'automatisch' } 'Manual' { T 'manuell' } 'Disabled' { T 'deaktiviert' } default { [string]$Dienst.StartType } }
   return ($st + ', ' + $ty)
 }
 function Write-Protokoll([string]$Text) {
@@ -370,12 +404,12 @@ function Install-Aufgabe {
   if ($Quelle -and (Test-Path -LiteralPath $Quelle)) {
     $quelleVoll = (Resolve-Path -LiteralPath $Quelle).ProviderPath.TrimEnd('\')
     if (-not [string]::Equals($quelleVoll, $skriptZiel.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
-      foreach ($f in 'Kern.ps1', 'schutz.ps1', 'Oberflaeche.ps1', 'pruefen.ps1', 'entfernen.ps1') {
+      foreach ($f in 'Kern.ps1', 'Englisch.ps1', 'schutz.ps1', 'Oberflaeche.ps1', 'pruefen.ps1', 'entfernen.ps1') {
         $src = Join-Path $quelleVoll $f
         if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $skriptZiel $f) -Force }
       }
       $paket = Split-Path -Parent $quelleVoll
-      foreach ($f in 'START.cmd', 'ENTFERNEN.cmd', 'PRUEFEN.cmd', 'LIESMICH.txt', 'LICENSE.txt') {
+      foreach ($f in 'START.cmd', 'ENTFERNEN.cmd', 'PRUEFEN.cmd', 'LIESMICH.txt', 'README.txt', 'LICENSE.txt') {
         $src = Join-Path $paket $f
         if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $script:InstallDir $f) -Force }
       }
@@ -387,6 +421,8 @@ function Install-Aufgabe {
     # Download-Markierung entfernen, damit die Skripte auch mit strengeren Richtlinien laufen.
     Get-ChildItem -LiteralPath $script:InstallDir -Recurse -File -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue
   }
+  # Der Wächter läuft als SYSTEM mit eigener Anzeigesprache: die hier gewählte Sprache mitgeben.
+  try { Set-Content -LiteralPath (Join-Path $skriptZiel 'sprache.txt') -Value $script:Sprache -Encoding ASCII -ErrorAction Stop } catch {}
   $psExe = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
   $arg = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + (Join-Path $skriptZiel 'schutz.ps1') + '"'
   $action = New-ScheduledTaskAction -Execute $psExe -Argument $arg
@@ -396,7 +432,7 @@ function Install-Aufgabe {
   $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
   $sysName = $script:SystemSid.Translate([System.Security.Principal.NTAccount]).Value   # lokalisierter Name von SYSTEM
   $pr = New-ScheduledTaskPrincipal -UserId $sysName -LogonType ServiceAccount -RunLevel Highest
-  $desc = 'Inoffizieller Workaround: verhindert, dass atieclxx.exe (AMD External Events Utility) sich jede Sekunde selbst kopiert und so die SSD abnutzt. Prüft nach Treiber-Updates selbst, ob AMD den Fehler behoben hat. Entfernen: ' + (Join-Path $script:InstallDir 'ENTFERNEN.cmd')
+  $desc = (T 'Inoffizieller Workaround: verhindert, dass atieclxx.exe (AMD External Events Utility) sich jede Sekunde selbst kopiert und so die SSD abnutzt. Prüft nach Treiber-Updates selbst, ob AMD den Fehler behoben hat. Entfernen: ') + (Join-Path $script:InstallDir 'ENTFERNEN.cmd')
   Register-ScheduledTask -TaskName $script:AufgabeName -Action $action -Trigger @($tStart, $tTakt) -Settings $set -Principal $pr -Description $desc -Force | Out-Null
   try {
     # Leserecht für angemeldete Benutzer, damit PRUEFEN.cmd den Status ohne Adminrechte zeigen kann.

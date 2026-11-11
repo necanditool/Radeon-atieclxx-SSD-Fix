@@ -1,5 +1,6 @@
 ﻿Radeon-atieclxx-SSD-Fix 2.1 – Radeon-Treiber schreibt fortwährend auf die SSD
 ==================================================================
+(English version: README.txt)
 
 WORUM GEHT ES?
 ComputerBase berichtete am 09.11.2026, dass der Dienst "AMD External Events Utility"
@@ -25,6 +26,11 @@ bestätigen). Es
   - bietet Knöpfe für den gewünschten Fix.
 Die Messung läuft im Hintergrund, das Fenster bleibt dabei bedienbar.
 
+SPRACHE
+Auf einem deutschen Windows startet das Programm auf Deutsch, sonst auf Englisch. Umschalten
+lässt sich jederzeit über das Auswahlfeld oben rechts im Fenster; die Auswahl wird gemerkt
+und gilt auch für PRUEFEN.cmd, ENTFERNEN.cmd und das Protokoll.
+
 DIE FIX-KNÖPFE
 1) Gezielter Schutz (empfohlen)
    Verbietet nur dem Konto SYSTEM, die oben genannte Kopie zu überschreiben oder zu löschen.
@@ -47,6 +53,7 @@ Treiber wird nichts verändert. Der gesamte Quelltext liegt offen im Ordner "Skr
 WEITERE DATEIEN
   PRUEFEN.cmd    schneller Status, misst 10 Sekunden (ohne Adminrechte)
   ENTFERNEN.cmd  nimmt alles zurück und löscht zusätzlich den Programmordner
+  README.txt     diese Anleitung auf Englisch
   LICENSE.txt    Lizenz (MIT)
 Nach "Gezielter Schutz" liegen START.cmd, PRUEFEN.cmd, ENTFERNEN.cmd und das Protokoll auch in
   C:\Program Files\Radeon-atieclxx-SSD-Fix
