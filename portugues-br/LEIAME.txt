@@ -1,0 +1,75 @@
+﻿Radeon-atieclxx-SSD-Fix 2.1 – o driver Radeon grava continuamente no SSD
+=========================================================================
+
+DO QUE SE TRATA?
+Em 09/11/2026, o ComputerBase noticiou que o serviço "AMD External Events Utility"
+do driver AMD grava continuamente na unidade do sistema para muitos usuários:
+https://www.computerbase.de/news/grafikkarten/schnelle-ssd-alterung-radeon-treiber-schreibt-fortwaehrend-daten-auf-die-ssd.100237/
+A AMD confirmou o bug, ainda não há uma versão corrigida do driver.
+
+O QUE ACONTECE EXATAMENTE?
+Medido com o rastreamento de eventos do Windows (ETW): com drivers afetados, o atieclxx.exe
+se copia A CADA SEGUNDO da pasta do driver para
+  C:\Windows\System32\config\systemprofile\AppData\Local\AMD\atieclxx.exe
+O arquivo tem cerca de 660 KB, o que dá cerca de 56 GB por dia em funcionamento contínuo.
+Depois disso, o serviço procura arquivos de instalação do driver de filtro amdkmpfd (Smart
+Access Memory). Isso explica por que desligar o Resizable BAR ajuda algumas pessoas.
+
+O PROGRAMA (INICIAR.cmd)
+O INICIAR.cmd abre uma janela (confirme a solicitação do Windows por direitos de
+administrador com "Sim"). Ele
+  - mede se e quanto o atieclxx.exe grava e mostra qual variante está presente:
+    autocópia para o local conhecido, gravação em outro local ou não afetado,
+  - estima quanto já foi gravado no SSD sem necessidade (taxa de gravação vezes o tempo
+    de uso desde a instalação da placa de vídeo AMD; uma estimativa, não um valor exato),
+  - oferece botões para a correção desejada.
+A medição roda em segundo plano, a janela continua utilizável enquanto isso.
+
+OS BOTÕES DE CORREÇÃO
+1) Proteção direcionada (recomendada)
+   Proíbe somente à conta SYSTEM sobrescrever ou excluir a cópia mencionada acima.
+   A tentativa de cópia falha imediatamente, nada mais é gravado. O serviço continua
+   rodando, o FreeSync, o frame pacing e as teclas de atalho não são afetados. Além disso,
+   é configurada a tarefa "Radeon-atieclxx-SSD-Fix" (Agendador de Tarefas, roda como SYSTEM
+   3 minutos após a inicialização e a cada 30 minutos): ela aplica a proteção de novo após
+   atualizações do driver e, após uma troca de driver, verifica sozinha se a AMD corrigiu
+   o bug. Nesse caso, ela remove a proteção por conta própria.
+2) Desativar serviço
+   A opção do artigo: encerra o serviço e define o tipo de inicialização como "Desativado".
+   Sempre funciona, mas pode afetar o FreeSync e o frame pacing.
+3) Desfazer tudo
+   Remove a proteção, a tarefa automática e a desativação do serviço. A pasta do programa é mantida.
+O botão "O que é Resizable BAR?" explica a terceira opção do artigo. Ela só pode ser
+ajustada na BIOS, por isso não há botão para ela.
+
+Nenhum arquivo é baixado, nenhuma conexão com a internet é necessária e nada é alterado
+no driver. Todo o código-fonte está aberto na pasta "Script".
+
+OUTROS ARQUIVOS
+  VERIFICAR.cmd  status rápido, mede por 10 segundos (sem direitos de administrador)
+  REMOVER.cmd    desfaz tudo e também exclui a pasta do programa
+  LICENSE.txt    licença (MIT)
+Após a "Proteção direcionada", INICIAR.cmd, VERIFICAR.cmd, REMOVER.cmd e o registro
+também ficam em
+  C:\Program Files\Radeon-atieclxx-SSD-Fix
+
+OBSERVAÇÕES
+- Se o Windows mostrar um aviso ao iniciar ("O Windows protegeu o computador"):
+  "Mais informações" -> "Executar assim mesmo". Ou, antes de extrair, clique com o botão
+  direito no arquivo ZIP -> Propriedades -> "Desbloquear".
+- Em PCs de empresas que só permitem scripts do PowerShell assinados, o programa não
+  inicia. Nesse caso, desative o serviço pelo services.msc.
+- No Windows Home não há janelas de aviso da tarefa automática (o msg.exe não existe lá);
+  tudo continua sendo gravado no registro.
+- Outras versões do driver podem se comportar de forma diferente. Por isso, o programa
+  mede antes e só age se a correção funcionar.
+
+ALTERNATIVA SEM ESTE PROGRAMA (sugestão do artigo)
+  Win+R -> services.msc -> "AMD External Events Utility" -> Parar, tipo de inicialização "Desativado".
+
+AVISO LEGAL
+Solução alternativa não oficial, sem ligação com a AMD e não verificada pela AMD. Uso por
+sua conta e risco, sem garantia e sem responsabilidade (veja LICENSE.txt). AMD, Radeon e
+Smart Access Memory são marcas da Advanced Micro Devices, Inc. Assim que a AMD lançar um
+driver corrigido, a tarefa remove a proteção por conta própria; depois disso, tudo pode
+ser removido com o REMOVER.cmd.

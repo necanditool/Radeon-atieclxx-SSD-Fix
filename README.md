@@ -1,6 +1,6 @@
 # Radeon-atieclxx-SSD-Fix
 
-**English:** [English version below](#english-version)
+**English:** [English version below](#english-version) · **Português (Brasil):** [versão em português abaixo](#versão-em-português-brasil)
 
 **Der Radeon-Treiber schreibt fortwährend auf deine SSD?** Bei betroffenen Treibern kopiert sich `atieclxx.exe` (Dienst „AMD External Events Utility“) jede Sekunde selbst – rund 56 GB pro Tag. Dieses Programm prüft, ob dein PC betroffen ist, schätzt den bisherigen Schaden und stoppt das Dauerschreiben gezielt, ohne den Dienst abzuschalten.
 
@@ -175,3 +175,92 @@ After targeted protection, both are also in `C:\Program Files\Radeon-atieclxx-SS
 ### License and trademarks
 
 MIT license, see [LICENSE.txt](LICENSE.txt). AMD, Radeon and Smart Access Memory are trademarks of Advanced Micro Devices, Inc. This project is not affiliated with AMD and is neither endorsed nor reviewed by AMD.
+
+---
+
+## Versão em português (Brasil)
+
+**O driver Radeon grava continuamente no seu SSD?** Com drivers afetados, o `atieclxx.exe` (serviço "AMD External Events Utility") se copia a cada segundo – cerca de 56 GB por dia. Este programa verifica se o seu PC está afetado, estima o dano até agora e interrompe a gravação contínua de forma direcionada, sem desligar o serviço.
+
+> **Observação:** Solução alternativa não oficial, não é da AMD e não tem ligação com a AMD. Uso por sua conta e risco, sem garantia e sem responsabilidade (veja [LICENSE.txt](LICENSE.txt)).
+
+![Radeon-atieclxx-SSD-Fix: bug detectado com estimativa de dano (valores de exemplo)](docs/screenshot-afetado-pt.png)
+
+*Visualização de exemplo, todos os valores são valores de exemplo.*
+
+### O problema
+
+Em 09/11/2026, o ComputerBase noticiou que o serviço "AMD External Events Utility" do driver Radeon grava continuamente na unidade do sistema para muitos usuários ([artigo](https://www.computerbase.de/news/grafikkarten/schnelle-ssd-alterung-radeon-treiber-schreibt-fortwaehrend-daten-auf-die-ssd.100237/)). A AMD confirmou o bug, ainda não há uma versão corrigida do driver.
+
+Medido com o rastreamento de eventos do Windows (ETW): com drivers afetados, o `atieclxx.exe` se copia **a cada segundo** da pasta do driver para
+
+```
+C:\Windows\System32\config\systemprofile\AppData\Local\AMD\atieclxx.exe
+```
+
+O arquivo tem cerca de 660 KB, o que dá cerca de 56 GB por dia em funcionamento contínuo. Depois disso, o serviço procura arquivos de instalação do driver de filtro `amdkmpfd` (Smart Access Memory). Isso explica por que desligar o Resizable BAR ajuda algumas pessoas.
+
+### Download e início
+
+1. Em [**Releases**](../../releases/latest), baixe o arquivo `Radeon-atieclxx-SSD-Fix-PT-BR.zip`.
+2. Extraia o arquivo ZIP por completo.
+3. Dê um clique duplo em `INICIAR.cmd` e confirme a solicitação do Windows por direitos de administrador com "Sim".
+
+Se o Windows mostrar um aviso ("O Windows protegeu o computador"): "Mais informações" → "Executar assim mesmo". Ou, antes de extrair, clique com o botão direito no arquivo ZIP → Propriedades → "Desbloquear".
+
+### O que o programa faz
+
+- **Análise:** mede se e quanto o `atieclxx.exe` grava e mostra qual variante está presente: autocópia para o local conhecido, gravação em outro local ou não afetado.
+- **Estimativa de dano:** quanto já foi gravado no SSD sem necessidade (taxa de gravação × tempo de uso desde a instalação da placa de vídeo AMD) e que parte da garantia de gravação usual isso representa.
+- **Botões de correção:**
+
+| Botão | Efeito |
+|---|---|
+| **Proteção direcionada** (recomendada) | Proíbe somente à conta SYSTEM sobrescrever esta única cópia. A tentativa de cópia falha imediatamente, nada mais é gravado. O serviço, o FreeSync, o frame pacing e as teclas de atalho não são afetados. Também configura uma tarefa automática (veja abaixo). |
+| **Desativar serviço** | A opção do artigo. Sempre funciona, mas pode afetar o FreeSync e o frame pacing. |
+| **Desfazer tudo** | Remove a proteção, a tarefa automática e a desativação do serviço. |
+
+A terceira opção do artigo, desligar o Resizable BAR na BIOS, é explicada pelo programa. Ela só pode ser feita na BIOS.
+
+![Estado após a proteção direcionada (valores de exemplo)](docs/screenshot-protegido-pt.png)
+
+*Estado após a proteção direcionada, também com valores de exemplo.*
+
+#### Tarefa automática após atualizações do driver
+
+A proteção direcionada configura a tarefa "Radeon-atieclxx-SSD-Fix" no Agendador de Tarefas. Ela roda como SYSTEM 3 minutos após a inicialização e depois a cada 30 minutos e
+
+- aplica a proteção de novo se uma atualização do driver tiver substituído o arquivo,
+- após uma troca de driver, verifica sozinha se a AMD corrigiu o bug e então remove a proteção por conta própria,
+- só grava no registro `C:\Program Files\Radeon-atieclxx-SSD-Fix\registro.txt` quando algo acontece.
+
+### Detalhes técnicos
+
+- Proteção: `icacls <cópia> /deny *S-1-5-18:(WD,AD,WEA,WA,DE)`, ou seja, uma entrada de negação só para a conta SYSTEM exatamente neste único arquivo.
+- A autocópia é detectada pelo USN do diário de alterações do NTFS (`FSCTL_READ_FILE_USN_DATA`). Carimbos de data/hora não servem para isso, porque o `CopyFile` os copia da origem. Como alternativa, um rastreamento ETW curto (no máximo 64 MB, excluído imediatamente) determina para onde vão as gravações.
+- A medição roda em segundo plano, a janela continua utilizável.
+- Sem downloads, sem conexão com a internet, sem alteração no driver, sem arquivos da AMD no pacote. Todo o código-fonte está na pasta [`portugues-br/Script`](portugues-br/Script).
+
+### Verificar o status e remover
+
+| Arquivo | Finalidade |
+|---|---|
+| `VERIFICAR.cmd` | status e medição de 10 segundos, sem direitos de administrador |
+| `REMOVER.cmd` | desfaz tudo e exclui a pasta do programa |
+
+Após a proteção direcionada, os dois também ficam em `C:\Program Files\Radeon-atieclxx-SSD-Fix`.
+
+### Alternativa sem este programa
+
+`Win+R` → `services.msc` → "AMD External Events Utility" → Parar, tipo de inicialização "Desativado". Esta é a sugestão do artigo; ela pode afetar o FreeSync e o frame pacing.
+
+### Limitações
+
+- Outras versões do driver podem se comportar de forma diferente. Por isso, o programa mede antes e só age se a correção funcionar.
+- A estimativa de dano é uma estimativa. Muitos SSDs não informam suas horas de uso ao Windows; nesse caso, são consideradas 8 horas por dia.
+- Em PCs em que a política da empresa só permite scripts do PowerShell assinados, o programa não inicia.
+- No Windows Home não há janelas de aviso da tarefa automática (o `msg.exe` não existe lá). Tudo continua sendo gravado no registro.
+
+### Licença e marcas
+
+Licença MIT, veja [LICENSE.txt](LICENSE.txt). AMD, Radeon e Smart Access Memory são marcas da Advanced Micro Devices, Inc. Este projeto não tem ligação com a AMD e não é apoiado nem verificado pela AMD.
